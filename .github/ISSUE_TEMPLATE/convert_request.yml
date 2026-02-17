@@ -1,0 +1,76 @@
+name: 🚀 Convert Resource Pack
+description: Submit resource pack untuk dikonversi agar support 1.20.1–1.21.10
+title: "[CONVERT] "
+labels: ["convert"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 📦 Request Konversi Resource Pack
+        Isi form di bawah, lalu submit. Bot akan otomatis mengkonversi pack kamu!
+
+  - type: input
+    id: pack_url
+    attributes:
+      label: URL Resource Pack
+      description: |
+        Link download pack kamu. Format yang didukung:
+        - **Dropbox**: `https://www.dropbox.com/s/xxx/pack.zip?dl=0`
+        - **Google Drive**: `https://drive.google.com/file/d/xxx/view`
+        - **MediaFire**: `https://www.mediafire.com/file/xxx`
+        - **OneDrive**: `https://1drv.ms/u/xxx`
+        - **MCPacks**: `https://mcpacks.net/p/xxx`
+        - **GitHub Release**: `https://github.com/user/repo/releases/download/v1/pack.zip`
+      placeholder: "https://www.dropbox.com/s/xxx/pack.zip?dl=0"
+    validations:
+      required: true
+
+  - type: input
+    id: output_name
+    attributes:
+      label: Nama Output File
+      description: Nama file hasil konversi (tanpa .zip)
+      placeholder: "my_resourcepack_converted"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: pack_type
+    attributes:
+      label: Tipe Pack
+      description: Plugin apa yang digunakan pack ini?
+      options:
+        - ItemsAdder
+        - Nexo
+        - ModelEngine v4
+        - ModelEngine v3
+        - Vanilla / Tidak tahu
+    validations:
+      required: true
+
+  - type: dropdown
+    id: base_version
+    attributes:
+      label: Versi Asli Pack
+      description: Pack ini dibuat untuk versi Minecraft berapa?
+      options:
+        - "1.20.1"
+        - "1.20.2"
+        - "1.20.3 / 1.20.4"
+        - "1.20.5 / 1.20.6"
+        - "1.21.0 / 1.21.1"
+        - "1.21.2 / 1.21.3"
+        - "1.21.4"
+        - "Tidak tahu (auto detect)"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Konfirmasi
+      options:
+        - label: Pack sudah bisa didownload dari link di atas (tidak private/expired)
+          required: true
+        - label: Saya mengerti hasil konversi akan tersedia selama 7 hari di Artifacts
+          required: true

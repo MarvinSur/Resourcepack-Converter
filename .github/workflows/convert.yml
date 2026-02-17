@@ -1,0 +1,130 @@
+name: Konversi Resource Pack
+
+on:
+  workflow_dispatch:
+    inputs:
+      pack_url:
+        description: 'URL Resource Pack (Dropbox/GDrive/MediaFire/MCPacks/dll)'
+        required: true
+        type: string
+      output_name:
+        description: 'Nama file output (tanpa .zip)'
+        required: false
+        default: 'converted_pack'
+        type: string
+
+  issues:
+    types: [opened, edited]
+
+jobs:
+  convert:
+    name: Konversi Pack
+    runs-on: ubuntu-latest
+
+    # Jalankan dari workflow_dispatch ATAU dari issue dengan label "convert"
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issues' &&
+       contains(github.event.issue.labels.*.name, 'convert'))
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests --break-system-packages
+
+      - name: Parse URL dari issue (jika dari issue)
+        if: github.event_name == 'issues'
+        id: parse_issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = context.payload.issue.body || '';
+
+            // Extract URL field dari issue form
+            const urlMatch = body.match(/### URL Resource Pack\s*\n+([^\n]+)/);
+            const nameMatch = body.match(/### Nama Output\s*\n+([^\n]+)/);
+
+            const url  = urlMatch  ? urlMatch[1].trim()  : '';
+            const name = nameMatch ? nameMatch[1].trim()  : 'converted_pack';
+
+            if (!url) {
+              core.setFailed('URL tidak ditemukan di body issue!');
+              return;
+            }
+
+            core.setOutput('pack_url',    url);
+            core.setOutput('output_name', name || 'converted_pack');
+            core.info(`URL: ${url}`);
+            core.info(`Output: ${name}`);
+
+      - name: Set variables
+        id: vars
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "pack_url=${{ github.event.inputs.pack_url }}"     >> $GITHUB_OUTPUT
+            echo "output_name=${{ github.event.inputs.output_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "pack_url=${{ steps.parse_issue.outputs.pack_url }}"     >> $GITHUB_OUTPUT
+            echo "output_name=${{ steps.parse_issue.outputs.output_name }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Convert URL ke direct link & jalankan konversi
+        run: |
+          mkdir -p staging
+          cd scripts
+          python manager.py \
+            --url "${{ steps.vars.outputs.pack_url }}" \
+            --output "${{ steps.vars.outputs.output_name }}.zip" \
+            --staging "../staging"
+
+      - name: Upload hasil konversi
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.vars.outputs.output_name }}
+          path: staging/${{ steps.vars.outputs.output_name }}.zip
+          retention-days: 7
+
+      - name: Komentar ke issue (jika dari issue)
+        if: github.event_name == 'issues' && success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            github.rest.issues.createComment({
+              owner:    context.repo.owner,
+              repo:     context.repo.repo,
+              issue_number: context.payload.issue.number,
+              body: `✅ **Konversi selesai!**\n\n📥 Download hasil: [Klik di sini](${runUrl}) → bagian **Artifacts**\n\nFile tersedia selama **7 hari**.`
+            });
+            github.rest.issues.addLabels({
+              owner:    context.repo.owner,
+              repo:     context.repo.repo,
+              issue_number: context.payload.issue.number,
+              labels: ['done']
+            });
+
+      - name: Komentar ke issue jika gagal
+        if: github.event_name == 'issues' && failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            github.rest.issues.createComment({
+              owner:    context.repo.owner,
+              repo:     context.repo.repo,
+              issue_number: context.payload.issue.number,
+              body: `❌ **Konversi gagal!**\n\nCek log error: [Klik di sini](${runUrl})\n\nPastikan URL pack valid dan bisa diakses.`
+            });
+            github.rest.issues.addLabels({
+              owner:    context.repo.owner,
+              repo:     context.repo.repo,
+              issue_number: context.payload.issue.number,
+              labels: ['error']
+            });
