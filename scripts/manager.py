@@ -1,8 +1,4 @@
 #!/usr/bin/env python3
-"""
-manager.py - Main orchestrator for Resourcepack-Converter
-Runs all steps in order: detect → convert → build overlays → package
-"""
 
 import os, sys, shutil, zipfile, json, logging, argparse
 from pathlib import Path
@@ -96,12 +92,12 @@ def run(pack_url: str, staging_dir: str = "staging", output_name: str = "convert
     pack_type_info    = detect_pack_type(pack_dir)
     base_version_info = detect_base_version(pack_dir)
 
-    pack_type   = pack_type_info["type"]
+    pack_types  = pack_type_info["types"]
     base_format = base_version_info["format"]
     description = json.load(open(os.path.join(pack_dir, "pack.mcmeta"), encoding="utf-8")) \
                       .get("pack", {}).get("description", "Converted Pack")
 
-    logger.info(f"Pack type: {pack_type} | Base format: {base_format} ({base_version_info['version']})")
+    logger.info(f"Pack types: {pack_types} | Base format: {base_format} ({base_version_info['version']})")
 
     # ── 3. Build overlay structure ────────────────────────────────────────
     logger.info("=== STEP 4: Build overlays ===")
@@ -114,7 +110,7 @@ def run(pack_url: str, staging_dir: str = "staging", output_name: str = "convert
         "has_overlays":     base_version_info["has_overlays"],
         "existing_overlays": base_version_info["existing_overlays"],
         "description":      description,
-        "pack_type":        pack_type,
+        "pack_type":        pack_types,
     })
 
     # ── 4. Convert item models for 1.21.2+ ────────────────────────────────
@@ -127,14 +123,14 @@ def run(pack_url: str, staging_dir: str = "staging", output_name: str = "convert
     )
 
     # ── 5. ModelEngine extra processing ──────────────────────────────────
-    if pack_type == "modelengine_v4":
+    if "modelengine_v4" in pack_types:
         logger.info("=== STEP 6: ModelEngine v4 assets ===")
         process_me_v4(pack_dir, output_dir)
-    elif pack_type == "modelengine_v3":
+    if "modelengine_v3" in pack_types:
         logger.info("=== STEP 6: ModelEngine v3 assets ===")
         process_me_v3(pack_dir, output_dir)
-    else:
-        logger.info(f"=== STEP 6: Skipped (pack type: {pack_type}) ===")
+    if not any(t in pack_types for t in ["modelengine_v4", "modelengine_v3"]):
+        logger.info(f"=== STEP 6: Skipped (pack types: {pack_types}) ===")
 
     # ── 6. Package ────────────────────────────────────────────────────────
     logger.info("=== STEP 7: Package ===")

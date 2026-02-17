@@ -35,20 +35,6 @@ body:
       required: false
 
   - type: dropdown
-    id: pack_type
-    attributes:
-      label: Tipe Pack
-      description: Plugin apa yang digunakan pack ini?
-      options:
-        - ItemsAdder
-        - Nexo
-        - ModelEngine v4
-        - ModelEngine v3
-        - Vanilla / Tidak tahu
-    validations:
-      required: true
-
-  - type: dropdown
     id: base_version
     attributes:
       label: Versi Asli Pack
@@ -74,3 +60,4 @@ body:
           required: true
         - label: Saya mengerti hasil konversi akan tersedia selama 7 hari di Artifacts
           required: true
+          

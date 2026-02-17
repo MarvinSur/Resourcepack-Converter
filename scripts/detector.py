@@ -1,7 +1,4 @@
 #!/usr/bin/env python3
-"""
-detector.py - Detect pack type (ItemsAdder/Nexo/ModelEngine v3/v4) and base version
-"""
 
 import json, os, glob, logging
 logger = logging.getLogger(__name__)
@@ -63,6 +60,10 @@ OVERLAY_RANGES = [
 
 
 def detect_pack_type(pack_dir: str) -> dict:
+    """
+    Returns ALL detected types (pack bisa gabungan ItemsAdder + ModelEngine, dll).
+    'types' adalah list, bisa lebih dari 1.
+    """
     scores = {"itemsadder": 0, "nexo": 0, "modelengine_v4": 0, "modelengine_v3": 0}
 
     # ItemsAdder: damage + damaged predicates together
@@ -106,11 +107,22 @@ def detect_pack_type(pack_dir: str) -> dict:
     if me3:
         scores["modelengine_v3"] += len(me3)
 
-    detected = max(scores, key=scores.get)
-    if scores[detected] == 0:
-        detected = "vanilla"
-    logger.info(f"Pack type: {detected} | scores: {scores}")
-    return {"type": detected, "scores": scores}
+    # Threshold: jika score > 0, dianggap detected
+    THRESHOLD = 1
+    detected = [t for t, s in scores.items() if s >= THRESHOLD]
+
+    # ME v3 dan v4 tidak mungkin bersamaan — ambil yang lebih tinggi
+    if "modelengine_v4" in detected and "modelengine_v3" in detected:
+        if scores["modelengine_v4"] >= scores["modelengine_v3"]:
+            detected.remove("modelengine_v3")
+        else:
+            detected.remove("modelengine_v4")
+
+    if not detected:
+        detected = ["vanilla"]
+
+    logger.info(f"Detected types: {detected} | scores: {scores}")
+    return {"types": detected, "scores": scores}
 
 
 def detect_base_version(pack_dir: str) -> dict:
