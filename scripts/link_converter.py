@@ -1,8 +1,4 @@
 #!/usr/bin/env python3
-"""
-link_converter.py - Convert share links to direct download URLs
-Supports: Dropbox, Google Drive, MediaFire, OneDrive, GitHub, MCPacks
-"""
 
 import re, logging, urllib.request, base64
 logger = logging.getLogger(__name__)

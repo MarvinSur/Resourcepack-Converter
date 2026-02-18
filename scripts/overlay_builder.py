@@ -1,8 +1,4 @@
 #!/usr/bin/env python3
-"""
-overlay_builder.py
-Builds the full overlay structure and pack.mcmeta for 1.20.1–1.21.10 support.
-"""
 
 import json, os, shutil, glob, logging
 from detector import OVERLAY_RANGES

@@ -1,26 +1,13 @@
 #!/usr/bin/env python3
-"""
-modelengine.py
-Handles ModelEngine v3 and v4 resource pack assets.
-
-ME v4: Blockbench .geo.json + .animation.json per entity
-ME v3: Legacy entity models in models/entity/
-"""
 
 import json, os, glob, shutil, logging
 logger = logging.getLogger(__name__)
 
 
-# ─── ModelEngine v4 ───────────────────────────────────────────────────────────
+# ModelEngine v4 
 
 def process_me_v4(pack_dir: str, output_dir: str):
-    """
-    ME v4: Copy geo + animation files, generate RP structure.
-    ME v4 packs typically contain:
-      assets/<namespace>/geo/<model>.geo.json
-      assets/<namespace>/animations/<model>.animation.json
-      assets/<namespace>/textures/entity/<model>/<texture>.png
-    """
+
     count = 0
     namespaces = _get_namespaces(pack_dir)
 
@@ -54,15 +41,13 @@ def process_me_v4(pack_dir: str, output_dir: str):
 
 
 def _fix_me_v4_geo_format(geo_data: dict) -> dict:
-    """
-    Ensure ME v4 geo uses format_version 1.12.0 (most compatible).
-    """
+
     if "format_version" not in geo_data:
         geo_data["format_version"] = "1.12.0"
     return geo_data
 
 
-# ─── ModelEngine v3 ───────────────────────────────────────────────────────────
+# ModelEngine v3 
 
 def process_me_v3(pack_dir: str, output_dir: str):
     """
@@ -98,7 +83,7 @@ def process_me_v3(pack_dir: str, output_dir: str):
     return count
 
 
-# ─── Version compatibility for ME ─────────────────────────────────────────────
+# Version compatibility for ME 
 
 def build_me_overlay(pack_dir: str, output_dir: str, overlay_id: str, me_version: str):
     """
@@ -117,7 +102,7 @@ def build_me_overlay(pack_dir: str, output_dir: str, overlay_id: str, me_version
     logger.info(f"ME {me_version} overlay built: {overlay_id}")
 
 
-# ─── Helpers ──────────────────────────────────────────────────────────────────
+# Helpers 
 
 def _get_namespaces(pack_dir: str) -> list:
     assets_dir = os.path.join(pack_dir, "assets")

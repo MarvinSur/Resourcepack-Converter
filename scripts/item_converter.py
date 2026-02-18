@@ -1,34 +1,20 @@
 #!/usr/bin/env python3
-"""
-item_converter.py
-Converts old predicate-based overrides (pre-1.21.2) → new item.json format (1.21.2+)
-Also generates overlay copies (old format) for backwards compat.
-"""
 
 import json, os, glob, logging, shutil
 logger = logging.getLogger(__name__)
 
 
 def _model_path(raw: str) -> str:
-    """Normalize model path, strip namespace if minecraft:"""
     if raw.startswith("minecraft:"):
         return raw[len("minecraft:"):]
     return raw
 
 
 def overrides_to_item_json(item_name: str, base_model: str, overrides: list) -> dict:
-    """
-    Convert overrides list → new item.json model definition.
 
-    Handles:
-    - custom_model_data  (Nexo, vanilla)
-    - damage + damaged   (ItemsAdder)
-    - pulling/pull       (bows)
-    - blocking           (shields)
-    """
-    cases_cmd = []      # custom_model_data cases
-    cases_damage = []   # damage/durability cases
-    pulling_models = {} # bow pulling states {0: model, 1: model, ...}
+    cases_cmd = []
+    cases_damage = []
+    pulling_models = {}
     blocking_model = None
     default_model = _model_path(base_model)
 
@@ -46,11 +32,15 @@ def overrides_to_item_json(item_name: str, base_model: str, overrides: list) -> 
         blocking = pred.get("blocking")
 
         if cmd is not None:
-            cases_cmd.append({"when": int(cmd), "model": {"type": "minecraft:model", "model": model}})
+
+            cases_cmd.append({
+                "when": [int(cmd)],  # ← Array, not single value!
+                "model": {"type": "minecraft:model", "model": model}
+            })
 
         elif damage is not None and pulling is None:
             cases_damage.append({
-                "when": float(round(damage, 4)),
+                "threshold": float(round(damage, 4)),  # threshold stays single value
                 "model": {"type": "minecraft:model", "model": model}
             })
 
@@ -69,13 +59,11 @@ def overrides_to_item_json(item_name: str, base_model: str, overrides: list) -> 
         elif blocking:
             blocking_model = model
 
-    # Build model definition
-    # Priority: custom_model_data > damage > pulling > blocking > default
     if cases_cmd:
         model_def = {
             "type": "minecraft:select",
             "property": "minecraft:custom_model_data",
-            "cases": sorted(cases_cmd, key=lambda x: x["when"]),
+            "cases": sorted(cases_cmd, key=lambda x: x["when"][0]),  # Sort by first value in array
             "fallback": {"type": "minecraft:model", "model": default_model}
         }
     elif pulling_models:
@@ -84,13 +72,13 @@ def overrides_to_item_json(item_name: str, base_model: str, overrides: list) -> 
             "property": "minecraft:using_item",
             "cases": [
                 {
-                    "when": True,
+                    "when": [True],  # ← Array!
                     "model": {
                         "type": "minecraft:select",
                         "property": "minecraft:charge_type",
                         "cases": [
                             {
-                                "when": "bow",
+                                "when": ["bow"],  # ← Array!
                                 "model": {
                                     "type": "minecraft:range_dispatch",
                                     "property": "minecraft:use_duration",
@@ -118,7 +106,10 @@ def overrides_to_item_json(item_name: str, base_model: str, overrides: list) -> 
             "type": "minecraft:select",
             "property": "minecraft:using_item",
             "cases": [
-                {"when": True, "model": {"type": "minecraft:model", "model": blocking_model}}
+                {
+                    "when": [True],  # ← Array!
+                    "model": {"type": "minecraft:model", "model": blocking_model}
+                }
             ],
             "fallback": {"type": "minecraft:model", "model": default_model}
         }
@@ -126,7 +117,7 @@ def overrides_to_item_json(item_name: str, base_model: str, overrides: list) -> 
         model_def = {
             "type": "minecraft:range_dispatch",
             "property": "minecraft:damage",
-            "entries": sorted(cases_damage, key=lambda x: x["when"]),
+            "entries": sorted(cases_damage, key=lambda x: x["threshold"]),
             "fallback": {"type": "minecraft:model", "model": default_model}
         }
     else:
@@ -175,3 +166,4 @@ def convert_pack_item_models(pack_dir: str, output_dir: str, overlay_id_new: str
 
     logger.info(f"Converted {converted} item models to item.json")
     return converted
+    

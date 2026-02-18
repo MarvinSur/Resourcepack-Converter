@@ -4,17 +4,11 @@ Konversi resource pack Minecraft Java Edition agar support **1.20.1 hingga 1.21.
 
 Support: **ItemsAdder** · **Nexo** · **ModelEngine v3/v4** · **Vanilla**
 
-Klik tombol di bawah ini untuk langsung convert pack kamu:
-
-[![🚀 CONVERT PACK SEKARANG](https://img.shields.io/badge/🚀_CONVERT_PACK_SEKARANG-2ea44f?style=for-the-badge)](../../issues/new?template=convert_request.yml)
-
-> Tombol di atas akan membuka halaman form. Isi URL pack dan versi asli, lalu submit.
-
 ---
 
 ## Langkah-langkah Detail
 
-**1.** Klik tombol **CONVERT PACK SEKARANG** di atas
+**1.** Klik tombol **CONVERT PACK SEKARANG** di bawah
 
 **2.** Isi form:
 - **URL Resource Pack** — link download pack kamu (Dropbox, GDrive, MediaFire, dll)
@@ -27,6 +21,10 @@ Klik tombol di bawah ini untuk langsung convert pack kamu:
 **4.** Tunggu beberapa menit. Bot akan otomatis memproses dan membalas di issue kamu dengan link download
 
 **5.** Download hasil dari bagian **Artifacts** di link yang dikirim bot
+
+> Klik tombol di bawah ini untuk langsung convert pack kamu:
+
+[![🚀 CONVERT PACK SEKARANG](https://img.shields.io/badge/🚀_CONVERT_PACK_SEKARANG-2ea44f?style=for-the-badge)](../../issues/new?template=convert_request.yml)
 
 ---
 
