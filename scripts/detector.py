@@ -60,10 +60,7 @@ OVERLAY_RANGES = [
 
 
 def detect_pack_type(pack_dir: str) -> dict:
-    """
-    Returns ALL detected types (pack bisa gabungan ItemsAdder + ModelEngine, dll).
-    'types' adalah list, bisa lebih dari 1.
-    """
+
     scores = {"itemsadder": 0, "nexo": 0, "modelengine_v4": 0, "modelengine_v3": 0}
 
     # ItemsAdder: damage + damaged predicates together
@@ -142,3 +139,26 @@ def detect_base_version(pack_dir: str) -> dict:
 
     logger.info(f"Base format: {fmt} → {version} | existing overlays: {existing}")
     return {"format": fmt, "version": version, "has_overlays": has_overlays, "existing_overlays": existing}
+
+def has_optifine_cit(pack_dir: str) -> bool:
+    """
+    Detect if pack uses OptiFine CIT (Custom Item Textures).
+    CIT requires old model.json format, NOT compatible with item.json.
+    """
+    cit_path = os.path.join(pack_dir, "assets", "minecraft", "optifine", "cit")
+    
+    # Also check alternative locations
+    alt_paths = [
+        os.path.join(pack_dir, "optifine", "cit"),
+        os.path.join(pack_dir, "assets", "optifine", "cit"),
+    ]
+    
+    for path in [cit_path] + alt_paths:
+        if os.path.exists(path):
+            # Check if there are actual .properties files
+            props = glob.glob(f"{path}/**/*.properties", recursive=True)
+            if props:
+                logger.info(f"OptiFine CIT detected: {len(props)} .properties files found")
+                return True
+    
+    return False

@@ -60,6 +60,17 @@ Klik tombol di bawah ini untuk langsung convert pack kamu:
 | overlay_v1_20_2 | 1.20.2 – 1.20.4 | 18–31 |
 | overlay_v1_20_1 | 1.20.1 | 15–17 |
 
+### ⚠️ Catatan OptiFine CIT
+
+Jika pack menggunakan **OptiFine CIT** (Custom Item Textures), converter akan **otomatis skip** konversi ke format `item.json` baru. Pack akan tetap menggunakan format lama (`model.json` dengan `overrides`) untuk kompatibilitas dengan OptiFine di semua versi 1.20.1–1.21.10.
+
+**Ciri pack pakai OptiFine CIT:**
+- Ada folder `optifine/cit/` dengan file `.properties`
+- Biasanya digunakan untuk ItemsAdder armor dengan custom textures
+
+**Kenapa skip?**  
+OptiFine di 1.21.4 belum support format `item.json` baru dan akan stuck di "Waiting for model sprites".
+
 ---
 
 ## Cara Pakai Manual (Via GitHub Actions)
