@@ -10,7 +10,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-from detector       import detect_pack_type, detect_base_version, has_optifine_cit
+from detector       import detect_pack_type, detect_base_version, strip_optifine_cit, strip_shaders
 from link_converter import convert_to_direct
 from item_converter import convert_pack_item_models
 from overlay_builder import build_full_structure
@@ -81,18 +81,23 @@ def run(pack_url: str, staging_dir: str = "staging", output_name: str = "convert
     logger.info("=== STEP 3: Detect ===")
     pack_type_info    = detect_pack_type(pack_dir)
     base_version_info = detect_base_version(pack_dir)
-    has_cit           = has_optifine_cit(pack_dir)
 
     pack_types  = pack_type_info["types"]
     base_format = base_version_info["format"]
-    description = json.load(open(os.path.join(pack_dir, "pack.mcmeta"), encoding="utf-8")) \
-                      .get("pack", {}).get("description", "Converted Pack")
+    
+    # Strip OptiFine CIT and shaders for compatibility
+    cit_removed = strip_optifine_cit(pack_dir)
+    shaders_removed = strip_shaders(pack_dir)
+    
+    if cit_removed > 0:
+        logger.warning(f"⚠ Removed {cit_removed} OptiFine CIT files (incompatible with 1.21.4+)")
+    if shaders_removed > 0:
+        logger.warning(f"⚠ Removed {shaders_removed} shader files (incompatible with 1.21.4+)")
+    
+    # Custom description - green text for Mortaz Development
+    description = "§aMortaz Development Converter"
 
     logger.info(f"Pack types: {pack_types} | Base format: {base_format} ({base_version_info['version']})")
-    
-    if has_cit:
-        logger.warning("⚠ OptiFine CIT detected - item.json conversion will be SKIPPED")
-        logger.warning("  Pack will use old model.json format for compatibility")
 
     # 3. Build overlay structure 
     logger.info("=== STEP 4: Build overlays ===")
@@ -108,18 +113,14 @@ def run(pack_url: str, staging_dir: str = "staging", output_name: str = "convert
         "pack_type":        pack_types,
     })
 
-    # 4. Convert item models for 1.21.2+
-    if has_cit:
-        logger.info("=== STEP 5: Skip item.json conversion (OptiFine CIT detected) ===")
-        logger.info("  Using old model.json format for all versions (1.20.1-1.21.10)")
-    else:
-        logger.info("=== STEP 5: Convert item models (1.21.2+) ===")
-        convert_pack_item_models(
-            pack_dir    = pack_dir,
-            output_dir  = output_dir,
-            overlay_id_new = "overlay_v1_21_4",
-            overlay_id_old = "overlay_v1_20_5",
-        )
+    # 4. Convert item models for 1.21.2+ 
+    logger.info("=== STEP 5: Convert item models (1.21.2+) ===")
+    convert_pack_item_models(
+        pack_dir    = pack_dir,
+        output_dir  = output_dir,
+        overlay_id_new = "overlay_v1_21_4",
+        overlay_id_old = "overlay_v1_20_5",
+    )
 
     # 5. ModelEngine extra processing 
     if "modelengine_v4" in pack_types:

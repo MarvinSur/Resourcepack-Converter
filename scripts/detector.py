@@ -140,25 +140,60 @@ def detect_base_version(pack_dir: str) -> dict:
     logger.info(f"Base format: {fmt} → {version} | existing overlays: {existing}")
     return {"format": fmt, "version": version, "has_overlays": has_overlays, "existing_overlays": existing}
 
-def has_optifine_cit(pack_dir: str) -> bool:
+def strip_optifine_cit(pack_dir: str) -> int:
     """
-    Detect if pack uses OptiFine CIT (Custom Item Textures).
-    CIT requires old model.json format, NOT compatible with item.json.
+    Remove OptiFine CIT folder completely for compatibility.
+    CIT causes issues with item.json format in 1.21.4+.
+    Returns number of files removed.
     """
-    cit_path = os.path.join(pack_dir, "assets", "minecraft", "optifine", "cit")
+    import shutil
     
-    # Also check alternative locations
-    alt_paths = [
+    cit_paths = [
+        os.path.join(pack_dir, "assets", "minecraft", "optifine", "cit"),
         os.path.join(pack_dir, "optifine", "cit"),
         os.path.join(pack_dir, "assets", "optifine", "cit"),
     ]
     
-    for path in [cit_path] + alt_paths:
+    removed = 0
+    for path in cit_paths:
         if os.path.exists(path):
-            # Check if there are actual .properties files
-            props = glob.glob(f"{path}/**/*.properties", recursive=True)
-            if props:
-                logger.info(f"OptiFine CIT detected: {len(props)} .properties files found")
-                return True
+            try:
+                # Count files before removal
+                props = glob.glob(f"{path}/**/*.properties", recursive=True)
+                removed += len(props)
+                
+                # Remove entire CIT directory
+                shutil.rmtree(path)
+                logger.info(f"Removed OptiFine CIT: {path} ({len(props)} files)")
+            except Exception as e:
+                logger.error(f"Failed to remove CIT: {e}")
     
-    return False
+    if removed > 0:
+        logger.info(f"✓ Stripped {removed} OptiFine CIT files for compatibility")
+    
+    return removed
+
+
+def strip_shaders(pack_dir: str) -> int:
+    import shutil
+    
+    shader_paths = [
+        os.path.join(pack_dir, "assets", "minecraft", "shaders"),
+    ]
+    
+    removed = 0
+    for path in shader_paths:
+        if os.path.exists(path):
+            try:
+                files = glob.glob(f"{path}/**/*", recursive=True)
+                removed += len([f for f in files if os.path.isfile(f)])
+                
+                shutil.rmtree(path)
+                logger.info(f"Removed shaders: {path} ({removed} files)")
+            except Exception as e:
+                logger.error(f"Failed to remove shaders: {e}")
+    
+    if removed > 0:
+        logger.info(f"✓ Stripped {removed} shader files")
+    
+    return removed
