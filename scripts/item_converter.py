@@ -5,6 +5,7 @@ logger = logging.getLogger(__name__)
 
 
 def _model_path(raw: str) -> str:
+    """Normalize model path, strip namespace if minecraft:"""
     if raw.startswith("minecraft:"):
         return raw[len("minecraft:"):]
     return raw
@@ -22,7 +23,6 @@ def overrides_to_item_json(item_name: str, base_model: str, overrides: list) -> 
         pred = ov.get("predicate", {})
         model = _model_path(ov.get("model", base_model))
 
-        # Skip exact vanilla model references
         if model in [item_name, f"item/{item_name}"]:
             continue
 
@@ -32,15 +32,15 @@ def overrides_to_item_json(item_name: str, base_model: str, overrides: list) -> 
         blocking = pred.get("blocking")
 
         if cmd is not None:
-
+            # CRITICAL: "when" must be array of STRINGS in 1.21.4+
             cases_cmd.append({
-                "when": [int(cmd)],  # ← Array, not single value!
+                "when": [str(int(cmd))],  # ← STRING in array!
                 "model": {"type": "minecraft:model", "model": model}
             })
 
         elif damage is not None and pulling is None:
             cases_damage.append({
-                "threshold": float(round(damage, 4)),  # threshold stays single value
+                "threshold": float(round(damage, 4)),
                 "model": {"type": "minecraft:model", "model": model}
             })
 
@@ -54,16 +54,17 @@ def overrides_to_item_json(item_name: str, base_model: str, overrides: list) -> 
                 else:
                     pulling_models[0] = model
             else:
-                pulling_models[-1] = model  # standby
+                pulling_models[-1] = model
 
         elif blocking:
             blocking_model = model
 
+    # Build model definition
     if cases_cmd:
         model_def = {
             "type": "minecraft:select",
             "property": "minecraft:custom_model_data",
-            "cases": sorted(cases_cmd, key=lambda x: x["when"][0]),  # Sort by first value in array
+            "cases": sorted(cases_cmd, key=lambda x: int(x["when"][0])),  # Sort by numeric value
             "fallback": {"type": "minecraft:model", "model": default_model}
         }
     elif pulling_models:
@@ -72,13 +73,13 @@ def overrides_to_item_json(item_name: str, base_model: str, overrides: list) -> 
             "property": "minecraft:using_item",
             "cases": [
                 {
-                    "when": [True],  # ← Array!
+                    "when": ["true"],  # ← STRING!
                     "model": {
                         "type": "minecraft:select",
                         "property": "minecraft:charge_type",
                         "cases": [
                             {
-                                "when": ["bow"],  # ← Array!
+                                "when": ["bow"],  # ← STRING!
                                 "model": {
                                     "type": "minecraft:range_dispatch",
                                     "property": "minecraft:use_duration",
@@ -107,7 +108,7 @@ def overrides_to_item_json(item_name: str, base_model: str, overrides: list) -> 
             "property": "minecraft:using_item",
             "cases": [
                 {
-                    "when": [True],  # ← Array!
+                    "when": ["true"],  # ← STRING!
                     "model": {"type": "minecraft:model", "model": blocking_model}
                 }
             ],
@@ -128,9 +129,7 @@ def overrides_to_item_json(item_name: str, base_model: str, overrides: list) -> 
 
 def convert_pack_item_models(pack_dir: str, output_dir: str, overlay_id_new: str, overlay_id_old: str):
     """
-    For each item model with overrides:
-    1. Write item.json (new format) to output_dir/assets/minecraft/items/
-    2. Write original model.json (old format) to output_dir/<overlay_id_old>/assets/*/models/item/
+    Convert item models to new format with overlays for old versions.
     """
     item_dir_out = os.path.join(output_dir, "assets", "minecraft", "items")
     os.makedirs(item_dir_out, exist_ok=True)
@@ -166,4 +165,3 @@ def convert_pack_item_models(pack_dir: str, output_dir: str, overlay_id_new: str
 
     logger.info(f"Converted {converted} item models to item.json")
     return converted
-    
