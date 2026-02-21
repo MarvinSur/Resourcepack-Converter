@@ -47,7 +47,6 @@ body:
         - "1.21.0 / 1.21.1"
         - "1.21.2 / 1.21.3"
         - "1.21.4 - 1.21.10"
-        - "1.21.11"
         - "Tidak tahu (auto detect)"
     validations:
       required: true
