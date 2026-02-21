@@ -61,7 +61,9 @@ jobs:
             }
 
             // Sanitasi: hanya huruf, angka, dash, underscore
-            name = name.replace(/[^a-zA-Z0-9_\-]/g, '_').replace(/^_+|_+$/g, '') || 'converted_pack';
+            name = name.replace(/\.zip$/i, '').replace(/[^a-zA-Z0-9_\-]/g, '_').replace(/^_+|_+$/g, '') || 'converted_pack';
+            // Tambah .zip supaya artifact didownload langsung sebagai .zip
+            name = name + '.zip';
 
             if (!url) {
               core.setFailed('URL tidak ditemukan di body issue!');
@@ -80,8 +82,9 @@ jobs:
             PACK_URL="${{ github.event.inputs.pack_url }}"
             OUT_NAME="${{ github.event.inputs.output_name }}"
             # Sanitasi output name dari workflow_dispatch juga
-            OUT_NAME=$(echo "$OUT_NAME" | tr -cs 'a-zA-Z0-9_-' '_' | sed 's/^_//;s/_$//')
+            OUT_NAME=$(echo "$OUT_NAME" | sed 's/\.zip$//I' | tr -cs 'a-zA-Z0-9_-' '_' | sed 's/^_//;s/_$//')
             [ -z "$OUT_NAME" ] && OUT_NAME="converted_pack"
+            OUT_NAME="${OUT_NAME}.zip"
             echo "pack_url=$PACK_URL"   >> $GITHUB_OUTPUT
             echo "output_name=$OUT_NAME" >> $GITHUB_OUTPUT
           else
