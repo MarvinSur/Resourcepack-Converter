@@ -47,12 +47,21 @@ jobs:
           script: |
             const body = context.payload.issue.body || '';
 
-            // Extract URL field dari issue form
-            const urlMatch = body.match(/### URL Resource Pack\s*\n+([^\n]+)/);
-            const nameMatch = body.match(/### Nama Output\s*\n+([^\n]+)/);
+            // GitHub issue forms render field labels as "### <label>\n\n<value>"
+            // Field label di template: "URL Resource Pack" dan "Nama Output File"
+            const urlMatch  = body.match(/###\s*URL Resource Pack\s*\n+([^\n]+)/);
+            const nameMatch = body.match(/###\s*Nama Output File\s*\n+([^\n]+)/);
 
             const url  = urlMatch  ? urlMatch[1].trim()  : '';
-            const name = nameMatch ? nameMatch[1].trim()  : 'converted_pack';
+            let   name = nameMatch ? nameMatch[1].trim()  : '';
+
+            // Kosong / placeholder / _No response_ → pakai default
+            if (!name || name === '_No response_' || name.toLowerCase() === 'none') {
+              name = 'converted_pack';
+            }
+
+            // Sanitasi: hanya huruf, angka, dash, underscore
+            name = name.replace(/[^a-zA-Z0-9_\-]/g, '_').replace(/^_+|_+$/g, '') || 'converted_pack';
 
             if (!url) {
               core.setFailed('URL tidak ditemukan di body issue!');
@@ -60,16 +69,21 @@ jobs:
             }
 
             core.setOutput('pack_url',    url);
-            core.setOutput('output_name', name || 'converted_pack');
-            core.info(`URL: ${url}`);
+            core.setOutput('output_name', name);
+            core.info(`URL   : ${url}`);
             core.info(`Output: ${name}`);
 
       - name: Set variables
         id: vars
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "pack_url=${{ github.event.inputs.pack_url }}"     >> $GITHUB_OUTPUT
-            echo "output_name=${{ github.event.inputs.output_name }}" >> $GITHUB_OUTPUT
+            PACK_URL="${{ github.event.inputs.pack_url }}"
+            OUT_NAME="${{ github.event.inputs.output_name }}"
+            # Sanitasi output name dari workflow_dispatch juga
+            OUT_NAME=$(echo "$OUT_NAME" | tr -cs 'a-zA-Z0-9_-' '_' | sed 's/^_//;s/_$//')
+            [ -z "$OUT_NAME" ] && OUT_NAME="converted_pack"
+            echo "pack_url=$PACK_URL"   >> $GITHUB_OUTPUT
+            echo "output_name=$OUT_NAME" >> $GITHUB_OUTPUT
           else
             echo "pack_url=${{ steps.parse_issue.outputs.pack_url }}"     >> $GITHUB_OUTPUT
             echo "output_name=${{ steps.parse_issue.outputs.output_name }}" >> $GITHUB_OUTPUT
@@ -88,8 +102,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.vars.outputs.output_name }}
-          path: staging/${{ steps.vars.outputs.output_name }}.zip
+          path: staging/output/
           retention-days: 7
+          if-no-files-found: error
 
       - name: Komentar ke issue (jika dari issue)
         if: github.event_name == 'issues' && success()

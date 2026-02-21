@@ -1,24 +1,42 @@
 #!/usr/bin/env python3
+"""
+overlay_builder.py
+==================
+Builds the full overlay directory structure so the converted pack
+supports Minecraft 1.20.1 – 1.21.10.
+
+Strategy
+--------
+Root dir  → highest pack_format assets (what the pack actually ships)
+Overlays  → copies of assets for every version range BELOW the root format
+
+Additionally:
+  - Removes assets/minecraft/items/ from all old overlays
+    (items/ is only valid from 1.21.2+, format 42+).
+  - Copies atlases to every overlay so textures load correctly.
+"""
 
 import json, os, shutil, glob, logging
 from detector import OVERLAY_RANGES
 
 logger = logging.getLogger(__name__)
 
-TARGET_MAX_FORMAT = 57  # 1.21.10
+TARGET_MAX_FORMAT = 57   # 1.21.10
 
+
+# ---------------------------------------------------------------------------
+# pack.mcmeta builder
+# ---------------------------------------------------------------------------
 
 def build_pack_mcmeta(base_format: int, description: str, output_dir: str):
     """
     Generate pack.mcmeta with:
-    - pack_format = max supported (57 = 1.21.10)
-    - supported_formats range covering all versions
-    - overlays entries for each range below base_format
+      pack_format   = TARGET_MAX_FORMAT (57)
+      supported_formats = 15 – 57
+      overlays      = one entry per range below base_format
     """
     entries = []
     for ovr in OVERLAY_RANGES:
-        # Only add overlay if its range is BELOW the base format
-        # (the base format's range goes directly in root)
         if ovr["max_format"] < base_format:
             entries.append({
                 "formats": {
@@ -38,21 +56,21 @@ def build_pack_mcmeta(base_format: int, description: str, output_dir: str):
             "description": description
         }
     }
-
     if entries:
         mcmeta["overlays"] = {"entries": entries}
 
     out_path = os.path.join(output_dir, "pack.mcmeta")
     json.dump(mcmeta, open(out_path, "w", encoding="utf-8"), indent=2)
-    logger.info(f"pack.mcmeta written with {len(entries)} overlay entries")
+    logger.info(f"pack.mcmeta written → {len(entries)} overlay entries")
     return mcmeta
 
 
+# ---------------------------------------------------------------------------
+# Asset copiers
+# ---------------------------------------------------------------------------
+
 def copy_assets_to_root(pack_dir: str, output_dir: str):
-    """
-    Copy all assets from pack_dir to output_dir root.
-    Skips pack.mcmeta (we generate our own).
-    """
+    """Copy everything from pack_dir/assets → output_dir/assets."""
     assets_src = os.path.join(pack_dir, "assets")
     assets_dst = os.path.join(output_dir, "assets")
 
@@ -62,43 +80,47 @@ def copy_assets_to_root(pack_dir: str, output_dir: str):
         shutil.copytree(assets_src, assets_dst)
         logger.info("Assets copied to root")
 
-    # Copy pack.png if exists
     icon_src = os.path.join(pack_dir, "pack.png")
     if os.path.exists(icon_src):
         shutil.copy2(icon_src, os.path.join(output_dir, "pack.png"))
 
 
-def copy_assets_to_overlay(pack_dir: str, output_dir: str, overlay_id: str, overrides: dict = None):
+def copy_assets_to_overlay(pack_dir: str, output_dir: str, overlay_id: str):
     """
-    Copy assets to a specific overlay directory.
-    overrides: dict of {relative_path: content} to override specific files in overlay.
+    Copy assets to overlay/<overlay_id>/assets/.
+    Then strip assets/minecraft/items/ from the overlay if it exists
+    (items/ format is 1.21.2+ only).
+    Also ensures atlases are present.
     """
     overlay_dir = os.path.join(output_dir, overlay_id)
-    assets_src = os.path.join(pack_dir, "assets")
-    assets_dst = os.path.join(overlay_dir, "assets")
+    assets_src  = os.path.join(pack_dir, "assets")
+    assets_dst  = os.path.join(overlay_dir, "assets")
 
-    if os.path.exists(assets_src):
-        if os.path.exists(assets_dst):
-            shutil.rmtree(assets_dst)
-        shutil.copytree(assets_src, assets_dst)
+    if not os.path.exists(assets_src):
+        return
 
-    # Apply overrides (e.g., different pack.mcmeta or model files)
-    if overrides:
-        for rel_path, content in overrides.items():
-            full_path = os.path.join(overlay_dir, rel_path)
-            os.makedirs(os.path.dirname(full_path), exist_ok=True)
-            if isinstance(content, dict):
-                json.dump(content, open(full_path, "w", encoding="utf-8"), indent=2)
-            else:
-                open(full_path, "w", encoding="utf-8").write(content)
+    if os.path.exists(assets_dst):
+        shutil.rmtree(assets_dst)
+    shutil.copytree(assets_src, assets_dst)
 
-    logger.info(f"Assets copied to overlay: {overlay_id}")
+    # Strip items/ — not valid before format 42 (1.21.2)
+    items_dir = os.path.join(assets_dst, "minecraft", "items")
+    if os.path.exists(items_dir):
+        shutil.rmtree(items_dir)
+        logger.debug(f"Stripped items/ from overlay {overlay_id}")
+
+    logger.info(f"Assets copied → overlay: {overlay_id}")
 
 
-def strip_overlays_from_existing(pack_dir: str, output_dir: str):
+# ---------------------------------------------------------------------------
+# Handle packs that already have overlays
+# ---------------------------------------------------------------------------
+
+def strip_overlays_from_existing(pack_dir: str, output_dir: str) -> bool:
     """
-    If pack already has overlays, flatten the highest-format one to root
-    and keep others as overlay dirs.
+    If the source pack already has overlays defined in pack.mcmeta,
+    copy those overlay directories verbatim into the output.
+    Returns True if existing overlays were found.
     """
     mcmeta_path = os.path.join(pack_dir, "pack.mcmeta")
     if not os.path.exists(mcmeta_path):
@@ -109,9 +131,8 @@ def strip_overlays_from_existing(pack_dir: str, output_dir: str):
         return False
 
     existing_entries = mcmeta.get("overlays", {}).get("entries", [])
-    logger.info(f"Pack has {len(existing_entries)} existing overlays, merging...")
+    logger.info(f"Pack has {len(existing_entries)} existing overlay(s), merging…")
 
-    # Copy existing overlay dirs to output
     for entry in existing_entries:
         overlay_dir = entry.get("directory", "")
         src = os.path.join(pack_dir, overlay_dir)
@@ -120,54 +141,56 @@ def strip_overlays_from_existing(pack_dir: str, output_dir: str):
             if os.path.exists(dst):
                 shutil.rmtree(dst)
             shutil.copytree(src, dst)
+            logger.info(f"  Copied existing overlay: {overlay_dir}")
 
     return True
 
 
+# ---------------------------------------------------------------------------
+# Main entry
+# ---------------------------------------------------------------------------
+
 def build_full_structure(pack_dir: str, output_dir: str, pack_info: dict):
     """
-    Main builder. Constructs complete overlay structure.
+    Construct the complete overlay structure.
 
-    pack_info: {
-        'format': int,
-        'version': str,
-        'has_overlays': bool,
-        'existing_overlays': list,
-        'description': str,
-        'pack_type': str,
-    }
+    pack_info keys:
+      format           int   — pack_format of the source pack
+      version          str   — human-readable MC version
+      has_overlays     bool
+      existing_overlays list
+      description      str
+      pack_type        list
     """
     os.makedirs(output_dir, exist_ok=True)
 
     base_format = pack_info["format"]
     description = pack_info.get("description", "Converted by Resourcepack-Converter")
 
-    # 1. Copy main assets to root
+    # 1. Copy root assets
     copy_assets_to_root(pack_dir, output_dir)
 
-    # 2. Handle existing overlays if any
-    has_existing = strip_overlays_from_existing(pack_dir, output_dir)
+    # 2. Merge any pre-existing overlays from the source pack
+    strip_overlays_from_existing(pack_dir, output_dir)
 
-    # 3. Build overlay entries for versions BELOW base_format
-    #    These need the OLD format (predicates, no item.json)
+    # 3. For every overlay range BELOW the base format, copy assets
+    #    Skip ranges whose directory was already provided by the source pack.
+    existing_ids = set(pack_info.get("existing_overlays", []))
+
     for ovr in OVERLAY_RANGES:
         if ovr["max_format"] >= base_format:
-            continue  # This range is covered by root or already handled
-
-        overlay_id = ovr["id"]
-        overlay_out = os.path.join(output_dir, overlay_id)
-
-        # Skip if already built from existing overlays
-        if ovr["id"] in pack_info.get("existing_overlays", []):
-            logger.info(f"Overlay {overlay_id} already exists, skipping copy")
+            # This range is covered by the root (or is the root itself)
             continue
 
-        # Copy assets to overlay
+        overlay_id = ovr["id"]
+
+        if overlay_id in existing_ids:
+            logger.info(f"Overlay {overlay_id} already merged from source, skipping copy")
+            continue
+
         copy_assets_to_overlay(pack_dir, output_dir, overlay_id)
 
-        logger.info(f"Built overlay: {overlay_id} (formats {ovr['min_format']}–{ovr['max_format']})")
-
-    # 4. Write pack.mcmeta
+    # 4. Write pack.mcmeta last (after all dirs are set up)
     build_pack_mcmeta(base_format, description, output_dir)
 
-    logger.info(f"Full overlay structure built in: {output_dir}")
+    logger.info(f"Full overlay structure built → {output_dir}")
