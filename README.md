@@ -1,6 +1,6 @@
 # 📦 Resourcepack-Converter
 
-Konversi resource pack Minecraft Java Edition agar support **1.20.1 hingga 1.21.10** dalam **1 file zip** menggunakan sistem overlay.
+Konversi resource pack Minecraft Java Edition agar support **1.20.1 hingga 1.21.11** dalam **1 file zip** menggunakan sistem overlay.
 
 Support: **ItemsAdder** · **Nexo** · **ModelEngine v3/v4** · **Vanilla**
 
@@ -48,6 +48,7 @@ Support: **ItemsAdder** · **Nexo** · **ModelEngine v3/v4** · **Vanilla**
 | Overlay | Versi Minecraft | Pack Format |
 |---------|----------------|-------------|
 | Root (base) | Mengikuti versi pack asli | — |
+| overlay_v1_21_11 | 1.21.11 | 75 |
 | overlay_v1_21_4 | 1.21.4 – 1.21.10 | 46–57 |
 | overlay_v1_21_2 | 1.21.2 – 1.21.3 | 42–45 |
 | overlay_v1_20_5 | 1.20.5 – 1.21.1 | 32–41 |

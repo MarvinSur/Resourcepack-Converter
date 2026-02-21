@@ -21,7 +21,7 @@ from detector import OVERLAY_RANGES
 
 logger = logging.getLogger(__name__)
 
-TARGET_MAX_FORMAT = 57   # 1.21.10
+TARGET_MAX_FORMAT = 75   # 1.21.11
 
 
 # ---------------------------------------------------------------------------
