@@ -6,7 +6,7 @@ Support: **ItemsAdder** · **Nexo** · **ModelEngine v3/v4** · **Vanilla**
 
 ---
 
-## Langkah-langkah Detail
+## Langkah-langkah Convert Menggunakan Github Action
 
 **1.** Klik tombol **CONVERT PACK SEKARANG** di bawah
 
