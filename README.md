@@ -12,15 +12,14 @@ Support: **ItemsAdder** · **Nexo** · **ModelEngine v3/v4** · **Vanilla**
 
 **2.** Isi form:
 - **URL Resource Pack** — link download pack kamu (Dropbox, GDrive, MediaFire, dll)
-- **Nama Output** — nama file hasil (opsional)
-- **Tipe Pack** — pilih ItemsAdder / Nexo / ModelEngine / Vanilla
-- **Versi Asli** — versi Minecraft pack tersebut dibuat
+- **Nama Output File** — nama file hasil (opsional, otomatis ditambah `.zip`)
+- **Versi Asli** — versi Minecraft pack tersebut dibuat (bisa auto detect)
 
 **3.** Klik **Submit new issue**
 
 **4.** Tunggu beberapa menit. Bot akan otomatis memproses dan membalas di issue kamu dengan link download
 
-**5.** Download hasil dari bagian **Artifacts** di link yang dikirim bot
+**5.** Download hasil dari bagian **Artifacts** di link yang dikirim bot — file langsung berupa `.zip`, tidak perlu extract lagi
 
 > Klik tombol di bawah ini untuk langsung convert pack kamu:
 
@@ -38,6 +37,7 @@ Support: **ItemsAdder** · **Nexo** · **ModelEngine v3/v4** · **Vanilla**
 | OneDrive | `https://1drv.ms/u/xxx` |
 | MCPacks | `https://mcpacks.net/p/xxx` |
 | GitHub Release | `https://github.com/user/repo/releases/download/v1/pack.zip` |
+| GitHub Raw | `https://github.com/user/repo/blob/main/pack.zip` |
 
 > Link akan **otomatis dikonversi** ke direct download. Tidak perlu ubah manual.
 
@@ -54,16 +54,20 @@ Support: **ItemsAdder** · **Nexo** · **ModelEngine v3/v4** · **Vanilla**
 | overlay_v1_20_2 | 1.20.2 – 1.20.4 | 18–31 |
 | overlay_v1_20_1 | 1.20.1 | 15–17 |
 
-### ⚠️ Catatan OptiFine CIT
+---
 
-Jika pack menggunakan **OptiFine CIT** (Custom Item Textures), converter akan **otomatis skip** konversi ke format `item.json` baru. Pack akan tetap menggunakan format lama (`model.json` dengan `overrides`) untuk kompatibilitas dengan OptiFine di semua versi 1.20.1–1.21.10.
+## Yang Otomatis Ditangani Converter
 
-**Ciri pack pakai OptiFine CIT:**
-- Ada folder `optifine/cit/` dengan file `.properties`
-- Biasanya digunakan untuk ItemsAdder armor dengan custom textures
-
-**Kenapa skip?**  
-OptiFine di 1.21.4 belum support format `item.json` baru dan akan stuck di "Waiting for model sprites".
+| Fitur | Keterangan |
+|-------|------------|
+| ✅ Auto detect tipe pack | ItemsAdder, Nexo, ModelEngine v3/v4, Vanilla |
+| ✅ Auto detect versi | Baca `pack.mcmeta` secara otomatis |
+| ✅ Convert item model | `models/item/*.json` (predicate) → `items/*.json` (1.21.2+ format) |
+| ✅ Overlay lama tetap ada | Versi lama tetap pakai predicate model yang asli |
+| ✅ Support pack dengan overlay | Pack yang sudah punya overlay akan di-merge, bukan ditimpa |
+| ✅ Strip shaders | `assets/minecraft/shaders/` otomatis dihapus |
+| ✅ Strip OptiFine CIT | Folder `optifine/cit/` otomatis dihapus (tidak kompatibel 1.21.4+) |
+| ✅ Direct link otomatis | Link Dropbox/GDrive/MediaFire/dll otomatis dikonversi |
 
 ---
 
@@ -105,7 +109,7 @@ Resourcepack-Converter/
 
 ```bash
 cd scripts
-python manager.py --url "https://dropbox.com/s/xxx/pack.zip?dl=0" --output my_pack
+python manager.py --url "https://dropbox.com/s/xxx/pack.zip?dl=0" --output my_pack.zip
 ```
 
 ---
