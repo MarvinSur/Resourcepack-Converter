@@ -28,24 +28,24 @@ TARGET_MAX_FORMAT = 75   # 1.21.11
 # pack.mcmeta builder
 # ---------------------------------------------------------------------------
 
-def build_pack_mcmeta(base_format: int, description: str, output_dir: str):
+def build_pack_mcmeta(base_format: int, description: str, output_dir: str, existing_overlays: list):
     """
     Generate pack.mcmeta with:
-      pack_format   = TARGET_MAX_FORMAT (57)
-      supported_formats = 15 – 57
-      overlays      = one entry per range below base_format
+      pack_format   = TARGET_MAX_FORMAT (75)
+      supported_formats = 15 – 75
+      overlays      = only those preserved from the source pack
     """
     entries = []
-    for ovr in OVERLAY_RANGES:
-        if ovr["max_format"] < base_format:
-            entries.append({
-                "formats": {
-                    "min_inclusive": ovr["min_format"],
-                    "max_inclusive": ovr["max_format"]
-                },
-                "directory": ovr["id"]
-            })
+    # If the source pack had valid existing overlays, we just re-list them.
+    for directory in existing_overlays:
+        # We don't have the exact formats from the source mcmeta, 
+        # but we can try to map them back, or just read the original mcmeta!
+        pass
 
+    # Actually, the easiest way to preserve existing overlay metadata is to 
+    # read the original pack.mcmeta if it exists, or just pass the original overlay entries.
+    
+    # We will just write a simple pack.mcmeta that covers all versions.
     mcmeta = {
         "pack": {
             "pack_format": TARGET_MAX_FORMAT,
@@ -56,12 +56,15 @@ def build_pack_mcmeta(base_format: int, description: str, output_dir: str):
             "description": description
         }
     }
-    if entries:
-        mcmeta["overlays"] = {"entries": entries}
+    
+    # If there are existing overlays, we should probably just inject them back.
+    # We will fetch them in build_full_structure and pass them here.
+    if existing_overlays:
+        mcmeta["overlays"] = {"entries": existing_overlays}
 
     out_path = os.path.join(output_dir, "pack.mcmeta")
     json.dump(mcmeta, open(out_path, "w", encoding="utf-8"), indent=2)
-    logger.info(f"pack.mcmeta written → {len(entries)} overlay entries")
+    logger.info(f"pack.mcmeta written (supported 15-{TARGET_MAX_FORMAT})")
     return mcmeta
 
 
@@ -173,24 +176,21 @@ def build_full_structure(pack_dir: str, output_dir: str, pack_info: dict):
     # 2. Merge any pre-existing overlays from the source pack
     strip_overlays_from_existing(pack_dir, output_dir)
 
-    # 3. For every overlay range BELOW the base format, copy assets
-    #    Skip ranges whose directory was already provided by the source pack.
-    existing_ids = set(pack_info.get("existing_overlays", []))
+    # We do NOT create backward overlays that duplicate the entire assets/ directory anymore.
+    # The root will hold both old (models/item/) and new (items/) item structures natively.
 
-    for ovr in OVERLAY_RANGES:
-        if ovr["max_format"] >= base_format:
-            # This range is covered by the root (or is the root itself)
-            continue
-
-        overlay_id = ovr["id"]
-
-        if overlay_id in existing_ids:
-            logger.info(f"Overlay {overlay_id} already merged from source, skipping copy")
-            continue
-
-        copy_assets_to_overlay(pack_dir, output_dir, overlay_id)
+    # We just need to extract the original overlay entries from pack.mcmeta (if any)
+    # to preserve them.
+    mcmeta_path = os.path.join(pack_dir, "pack.mcmeta")
+    existing_entries = []
+    if os.path.exists(mcmeta_path):
+        try:
+            mcmeta = json.load(open(mcmeta_path, encoding="utf-8"))
+            existing_entries = mcmeta.get("overlays", {}).get("entries", [])
+        except Exception:
+            pass
 
     # 4. Write pack.mcmeta last (after all dirs are set up)
-    build_pack_mcmeta(base_format, description, output_dir)
+    build_pack_mcmeta(base_format, description, output_dir, existing_entries)
 
-    logger.info(f"Full overlay structure built → {output_dir}")
+    logger.info(f"Full structure built → {output_dir} (Backwards overlays eliminated)")
