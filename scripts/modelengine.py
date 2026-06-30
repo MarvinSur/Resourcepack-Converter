@@ -7,35 +7,41 @@ logger = logging.getLogger(__name__)
 # ModelEngine v4 
 
 def process_me_v4(pack_dir: str, output_dir: str):
-    """
-    Process ME v4 models.
-    Textures and raw files are already copied to output_dir by overlay_builder.
-    Here we only need to apply JSON fixes (like format_version) to geo files in the output dir.
-    """
+
     count = 0
-    namespaces = _get_namespaces(output_dir)
+    namespaces = _get_namespaces(pack_dir)
 
     for ns in namespaces:
-        # Geo files in the output directory
-        for geo_file in glob.glob(f"{output_dir}/assets/{ns}/geo/*.geo.json"):
-            try:
-                with open(geo_file, "r", encoding="utf-8") as f:
-                    geo_data = json.load(f)
-                
-                fixed_data = _fix_me_v4_geo_format(geo_data)
-                
-                with open(geo_file, "w", encoding="utf-8") as f:
-                    json.dump(fixed_data, f, indent=2)
-                    
-                count += 1
-                logger.debug(f"ME v4: fixed geo format for {os.path.basename(geo_file)}")
-            except Exception as e:
-                logger.error(f"Failed to process ME v4 geo file {geo_file}: {e}")
+        # Geo files
+        for geo_file in glob.glob(f"{pack_dir}/assets/{ns}/geo/*.geo.json"):
+            model_name = os.path.basename(geo_file).replace(".geo.json", "")
+            dst_dir = os.path.join(output_dir, "assets", ns, "geo")
+            os.makedirs(dst_dir, exist_ok=True)
+            shutil.copy2(geo_file, os.path.join(dst_dir, os.path.basename(geo_file)))
 
-    logger.info(f"ME v4: processed and fixed {count} models")
+            # Paired animation file
+            anim_src = f"{pack_dir}/assets/{ns}/animations/{model_name}.animation.json"
+            if os.path.exists(anim_src):
+                anim_dst = os.path.join(output_dir, "assets", ns, "animations")
+                os.makedirs(anim_dst, exist_ok=True)
+                shutil.copy2(anim_src, os.path.join(anim_dst, os.path.basename(anim_src)))
+
+            # Textures
+            tex_src = f"{pack_dir}/assets/{ns}/textures/entity/{model_name}"
+            if os.path.exists(tex_src):
+                tex_dst = os.path.join(output_dir, "assets", ns, "textures", "entity", model_name)
+                if not os.path.exists(tex_dst):
+                    shutil.copytree(tex_src, tex_dst)
+
+            count += 1
+            logger.debug(f"ME v4: copied {model_name}")
+
+    logger.info(f"ME v4: processed {count} models")
     return count
 
+
 def _fix_me_v4_geo_format(geo_data: dict) -> dict:
+
     if "format_version" not in geo_data:
         geo_data["format_version"] = "1.12.0"
     return geo_data
@@ -46,17 +52,34 @@ def _fix_me_v4_geo_format(geo_data: dict) -> dict:
 def process_me_v3(pack_dir: str, output_dir: str):
     """
     ME v3: Legacy entity models.
-    Textures and raw files are already copied to output_dir by overlay_builder.
-    There are no JSON format fixes needed for ME v3.
+    Structure: assets/<namespace>/models/entity/<model>.json
+    Copies to output preserving structure.
+    Also copies paired textures from textures/entity/.
     """
     count = 0
-    namespaces = _get_namespaces(output_dir)
+    namespaces = _get_namespaces(pack_dir)
 
     for ns in namespaces:
-        for _ in glob.glob(f"{output_dir}/assets/{ns}/models/entity/**/*.json", recursive=True):
-            count += 1
+        for model_file in glob.glob(f"{pack_dir}/assets/{ns}/models/entity/**/*.json", recursive=True):
+            rel = os.path.relpath(model_file, f"{pack_dir}/assets/{ns}/models/entity")
+            model_name = rel.replace(".json", "").replace("\\", "/")
 
-    logger.info(f"ME v3: processed {count} entity models (files natively copied)")
+            # Copy model
+            dst = os.path.join(output_dir, "assets", ns, "models", "entity", rel)
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            shutil.copy2(model_file, dst)
+
+            # Copy textures
+            for tex_src in glob.glob(f"{pack_dir}/assets/{ns}/textures/entity/{model_name}*"):
+                tex_rel = os.path.relpath(tex_src, f"{pack_dir}/assets/{ns}/textures/entity")
+                tex_dst = os.path.join(output_dir, "assets", ns, "textures", "entity", tex_rel)
+                os.makedirs(os.path.dirname(tex_dst), exist_ok=True)
+                shutil.copy2(tex_src, tex_dst)
+
+            count += 1
+            logger.debug(f"ME v3: copied {model_name}")
+
+    logger.info(f"ME v3: processed {count} entity models")
     return count
 
 

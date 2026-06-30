@@ -139,11 +139,35 @@ def run(pack_url: str, staging_dir: str = "staging", output_name: str = "convert
 
     # ── Step 5: Convert item models ──────────────────────────────────────────
     logger.info("=== STEP 5: Convert item models ===")
-    
+    #
+    # convert_pack_item_models will:
+    #   • write assets/minecraft/items/*.json  → root (and overlay_v1_21_4 if needed)
+    #   • copy original predicate models       → ALL old overlays
+    #
+    # We determine which overlay IDs need item.json (1.21.2+) vs predicates.
+    new_item_json_overlays = [o["id"] for o in OVERLAY_RANGES if o["item_json"]]
+    old_predicate_overlays = [o["id"] for o in OVERLAY_RANGES if not o["item_json"]]
+
     convert_pack_item_models(
         pack_dir   = pack_dir,
         output_dir = output_dir,
+        # These args are kept for API compat but logic is now inside item_converter
+        overlay_id_new = "overlay_v1_21_4",
+        overlay_id_old = "overlay_v1_20_5",
     )
+
+    # ── Step 5b: Also write item.json into overlay_v1_21_2 ──────────────────
+    # 1.21.2 and 1.21.3 (format 42–45) ALSO use the new item.json format.
+    # We copy root assets/minecraft/items/ into overlay_v1_21_2 if that
+    # overlay exists in the output (i.e. base_format > 45).
+    ov_1_21_2_dir = os.path.join(output_dir, "overlay_v1_21_2")
+    root_items_dir = os.path.join(output_dir, "assets", "minecraft", "items")
+    if os.path.exists(ov_1_21_2_dir) and os.path.exists(root_items_dir):
+        ov_items_dst = os.path.join(ov_1_21_2_dir, "assets", "minecraft", "items")
+        if os.path.exists(ov_items_dst):
+            shutil.rmtree(ov_items_dst)
+        shutil.copytree(root_items_dir, ov_items_dst)
+        logger.info("Copied items/ → overlay_v1_21_2")
 
     # ── Step 6: ModelEngine ─────────────────────────────────────────────────
     if "modelengine_v4" in pack_types:

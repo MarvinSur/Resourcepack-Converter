@@ -455,125 +455,58 @@ def overrides_to_item_json(item_name: str, base_model: str, overrides: list) -> 
 # Pack-level conversion
 # ---------------------------------------------------------------------------
 
-def _parse_items_json(item_json: dict) -> list:
-    """Parse 1.21.2+ items/*.json back into overrides list for older versions."""
-    overrides = []
-    
-    # Try to find range_dispatch for custom_model_data
-    # This might be nested under a condition (e.g. for bows/shields)
-    def extract_entries(model_obj):
-        if not isinstance(model_obj, dict):
-            return
-        
-        t = model_obj.get("type", "").replace("minecraft:", "")
-        if t == "range_dispatch":
-            prop = model_obj.get("property", "").replace("minecraft:", "")
-            if prop == "custom_model_data":
-                for entry in model_obj.get("entries", []):
-                    threshold = entry.get("threshold")
-                    mdl = entry.get("model", {})
-                    if isinstance(mdl, dict):
-                        m = mdl.get("model")
-                        if m:
-                            overrides.append({"predicate": {"custom_model_data": int(threshold)}, "model": m})
-        elif t == "condition":
-            extract_entries(model_obj.get("on_true"))
-            extract_entries(model_obj.get("on_false"))
-        elif t == "select":
-            for case in model_obj.get("cases", []):
-                extract_entries(case.get("model"))
-                
-    extract_entries(item_json.get("model", {}))
-    return overrides
-
-
-def convert_pack_item_models(pack_dir: str, output_dir: str):
+def convert_pack_item_models(pack_dir: str, output_dir: str,
+                              overlay_id_new: str = "overlay_v1_21_4",
+                              overlay_id_old: str = "overlay_v1_20_5"):
     """
     1. Scan all assets/*/models/item/*.json that have 'overrides'
-       -> Generate assets/minecraft/items/<item>.json in output root
-    2. Scan all assets/minecraft/items/*.json 
-       -> Generate assets/minecraft/models/item/<item>.json if missing, 
-          so that older clients (1.20.1) can use custom_model_data.
+    2. Generate assets/minecraft/items/<item>.json in output root  (1.21.2+ format)
+    3. Copy original predicate model files into EVERY old overlay dir
+       so that versions < 1.21.2 still get the correct predicates.
+
+    Old overlays that need the original predicate models:
+        overlay_v1_20_1   (format 15–17)
+        overlay_v1_20_2   (format 18–31)
+        overlay_v1_20_5   (format 32–41)
     """
+    from detector import OVERLAY_RANGES
+
     item_dir_out = os.path.join(output_dir, "assets", "minecraft", "items")
-    models_dir_out = os.path.join(output_dir, "assets", "minecraft", "models", "item")
     os.makedirs(item_dir_out, exist_ok=True)
-    os.makedirs(models_dir_out, exist_ok=True)
 
-    converted_forward = 0
-    converted_backward = 0
+    # Collect all old overlays that should NOT have item.json
+    old_overlays = [o["id"] for o in OVERLAY_RANGES if not o["item_json"]]
 
-    # --- FORWARD CONVERSION (models/item -> items) ---
+    converted = 0
     for model_file in glob.glob(f"{pack_dir}/assets/*/models/item/*.json"):
         try:
-            data = json.load(open(model_file, encoding="utf-8"))
+            data      = json.load(open(model_file, encoding="utf-8"))
             overrides = data.get("overrides", [])
             if not overrides:
                 continue
 
             item_name  = os.path.basename(model_file).replace(".json", "")
             base_model = data.get("parent", f"minecraft:item/{item_name}")
+            namespace  = model_file.replace("\\", "/").split("/assets/")[1].split("/")[0]
 
+            # --- Write item.json (1.21.2+ format) ---
             item_json = overrides_to_item_json(item_name, base_model, overrides)
             out_path  = os.path.join(item_dir_out, f"{item_name}.json")
-            
-            # Only write if it doesn't already exist (respect native 1.21.2+ files)
-            if not os.path.exists(out_path):
-                json.dump(item_json, open(out_path, "w", encoding="utf-8"), indent=2)
-                converted_forward += 1
+            json.dump(item_json, open(out_path, "w", encoding="utf-8"), indent=2)
+
+            # --- Copy original model.json to ALL old overlays ---
+            for ov_id in old_overlays:
+                ov_model_dir = os.path.join(
+                    output_dir, ov_id, "assets", namespace, "models", "item"
+                )
+                os.makedirs(ov_model_dir, exist_ok=True)
+                shutil.copy2(model_file, os.path.join(ov_model_dir, os.path.basename(model_file)))
+
+            converted += 1
 
         except Exception as e:
-            logger.error(f"Failed to forward convert {model_file}: {e}", exc_info=True)
+            logger.error(f"Failed to convert {model_file}: {e}", exc_info=True)
             continue
 
-    # --- BACKWARD CONVERSION (items -> models/item) ---
-    for item_file in glob.glob(f"{pack_dir}/assets/minecraft/items/*.json"):
-        try:
-            data = json.load(open(item_file, encoding="utf-8"))
-            item_name = os.path.basename(item_file).replace(".json", "")
-            
-            # Parse custom_model_data from the items json
-            overrides = _parse_items_json(data)
-            if not overrides:
-                continue
-                
-            model_out_path = os.path.join(models_dir_out, f"{item_name}.json")
-            
-            # If the model file already exists in the output, append to its overrides
-            # otherwise, create a new one
-            if os.path.exists(model_out_path):
-                try:
-                    existing_model = json.load(open(model_out_path, encoding="utf-8"))
-                except:
-                    existing_model = {"parent": "item/generated", "textures": {"layer0": f"item/{item_name}"}}
-            else:
-                existing_model = {"parent": "item/generated", "textures": {"layer0": f"item/{item_name}"}}
-                
-            if "overrides" not in existing_model:
-                existing_model["overrides"] = []
-                
-            # Merge without duplicates
-            existing_cmds = {ov.get("predicate", {}).get("custom_model_data") for ov in existing_model["overrides"] if isinstance(ov.get("predicate"), dict)}
-            added = False
-            for new_ov in overrides:
-                cmd = new_ov.get("predicate", {}).get("custom_model_data")
-                if cmd not in existing_cmds:
-                    existing_model["overrides"].append(new_ov)
-                    existing_cmds.add(cmd)
-                    added = True
-                    
-            if added:
-                # Sort overrides by cmd to be neat
-                def get_cmd(ov):
-                    return ov.get("predicate", {}).get("custom_model_data", 0)
-                existing_model["overrides"].sort(key=get_cmd)
-                
-                json.dump(existing_model, open(model_out_path, "w", encoding="utf-8"), indent=2)
-                converted_backward += 1
-                
-        except Exception as e:
-            logger.error(f"Failed to backward convert {item_file}: {e}", exc_info=True)
-            continue
-
-    logger.info(f"Converted {converted_forward} models->items, {converted_backward} items->models")
-    return converted_forward + converted_backward
+    logger.info(f"Converted {converted} item models → items/*.json")
+    return converted
