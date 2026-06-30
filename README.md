@@ -1,3 +1,7 @@
+# ARCHIVED, TIDAK DI UPDATE LAGI. SILAHKAN CEK VERSI TERBARUNYA DI https://pack-converter.mortaz.my.id
+
+---
+
 # 📦 Resourcepack-Converter
 
 Konversi resource pack Minecraft Java Edition agar support **1.20.1 hingga 1.21.11** dalam **1 file zip** menggunakan sistem overlay.
@@ -11,6 +15,7 @@ Support: **ItemsAdder** · **Nexo** · **ModelEngine v3/v4** · **Vanilla**
 **1.** Klik tombol **CONVERT PACK SEKARANG** di bawah
 
 **2.** Isi form:
+
 - **URL Resource Pack** — link download pack kamu (Dropbox, GDrive, MediaFire, dll)
 - **Nama Output File** — nama file hasil (opsional, otomatis ditambah `.zip`)
 - **Versi Asli** — versi Minecraft pack tersebut dibuat (bisa auto detect)
@@ -29,15 +34,15 @@ Support: **ItemsAdder** · **Nexo** · **ModelEngine v3/v4** · **Vanilla**
 
 ## Format Link yang Didukung
 
-| Platform | Contoh |
-|----------|--------|
-| Dropbox | `https://www.dropbox.com/s/xxx/pack.zip?dl=0` → otomatis jadi `dl=1` |
-| Google Drive | `https://drive.google.com/file/d/xxx/view` |
-| MediaFire | `https://www.mediafire.com/file/xxx` |
-| OneDrive | `https://1drv.ms/u/xxx` |
-| MCPacks | `https://mcpacks.net/p/xxx` |
-| GitHub Release | `https://github.com/user/repo/releases/download/v1/pack.zip` |
-| GitHub Raw | `https://github.com/user/repo/blob/main/pack.zip` |
+| Platform       | Contoh                                                               |
+| -------------- | -------------------------------------------------------------------- |
+| Dropbox        | `https://www.dropbox.com/s/xxx/pack.zip?dl=0` → otomatis jadi `dl=1` |
+| Google Drive   | `https://drive.google.com/file/d/xxx/view`                           |
+| MediaFire      | `https://www.mediafire.com/file/xxx`                                 |
+| OneDrive       | `https://1drv.ms/u/xxx`                                              |
+| MCPacks        | `https://mcpacks.net/p/xxx`                                          |
+| GitHub Release | `https://github.com/user/repo/releases/download/v1/pack.zip`         |
+| GitHub Raw     | `https://github.com/user/repo/blob/main/pack.zip`                    |
 
 > Link akan **otomatis dikonversi** ke direct download. Tidak perlu ubah manual.
 
@@ -45,30 +50,30 @@ Support: **ItemsAdder** · **Nexo** · **ModelEngine v3/v4** · **Vanilla**
 
 ## Versi yang Didukung
 
-| Overlay | Versi Minecraft | Pack Format |
-|---------|----------------|-------------|
-| Root (base) | Mengikuti versi pack asli | — |
-| overlay_v1_21_11 | 1.21.11 | 75 |
-| overlay_v1_21_4 | 1.21.4 – 1.21.10 | 46–57 |
-| overlay_v1_21_2 | 1.21.2 – 1.21.3 | 42–45 |
-| overlay_v1_20_5 | 1.20.5 – 1.21.1 | 32–41 |
-| overlay_v1_20_2 | 1.20.2 – 1.20.4 | 18–31 |
-| overlay_v1_20_1 | 1.20.1 | 15–17 |
+| Overlay          | Versi Minecraft           | Pack Format |
+| ---------------- | ------------------------- | ----------- |
+| Root (base)      | Mengikuti versi pack asli | —           |
+| overlay_v1_21_11 | 1.21.11                   | 75          |
+| overlay_v1_21_4  | 1.21.4 – 1.21.10          | 46–57       |
+| overlay_v1_21_2  | 1.21.2 – 1.21.3           | 42–45       |
+| overlay_v1_20_5  | 1.20.5 – 1.21.1           | 32–41       |
+| overlay_v1_20_2  | 1.20.2 – 1.20.4           | 18–31       |
+| overlay_v1_20_1  | 1.20.1                    | 15–17       |
 
 ---
 
 ## Yang Otomatis Ditangani Converter
 
-| Fitur | Keterangan |
-|-------|------------|
-| ✅ Auto detect tipe pack | ItemsAdder, Nexo, ModelEngine v3/v4, Vanilla |
-| ✅ Auto detect versi | Baca `pack.mcmeta` secara otomatis |
-| ✅ Convert item model | `models/item/*.json` (predicate) → `items/*.json` (1.21.2+ format) |
-| ✅ Overlay lama tetap ada | Versi lama tetap pakai predicate model yang asli |
-| ✅ Support pack dengan overlay | Pack yang sudah punya overlay akan di-merge, bukan ditimpa |
-| ✅ Strip shaders | `assets/minecraft/shaders/` otomatis dihapus |
-| ✅ Strip OptiFine CIT | Folder `optifine/cit/` otomatis dihapus (tidak kompatibel 1.21.4+) |
-| ✅ Direct link otomatis | Link Dropbox/GDrive/MediaFire/dll otomatis dikonversi |
+| Fitur                          | Keterangan                                                         |
+| ------------------------------ | ------------------------------------------------------------------ |
+| ✅ Auto detect tipe pack       | ItemsAdder, Nexo, ModelEngine v3/v4, Vanilla                       |
+| ✅ Auto detect versi           | Baca `pack.mcmeta` secara otomatis                                 |
+| ✅ Convert item model          | `models/item/*.json` (predicate) → `items/*.json` (1.21.2+ format) |
+| ✅ Overlay lama tetap ada      | Versi lama tetap pakai predicate model yang asli                   |
+| ✅ Support pack dengan overlay | Pack yang sudah punya overlay akan di-merge, bukan ditimpa         |
+| ✅ Strip shaders               | `assets/minecraft/shaders/` otomatis dihapus                       |
+| ✅ Strip OptiFine CIT          | Folder `optifine/cit/` otomatis dihapus (tidak kompatibel 1.21.4+) |
+| ✅ Direct link otomatis        | Link Dropbox/GDrive/MediaFire/dll otomatis dikonversi              |
 
 ---
 
